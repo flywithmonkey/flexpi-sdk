@@ -1,0 +1,4 @@
+0.0.1 - 05.03.2012
+- Async loader - flex.loader
+- Conection with API by socket.io - flex.connect
+- Log defined variables - flex.stats

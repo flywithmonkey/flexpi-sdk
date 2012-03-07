@@ -1,3 +1,18 @@
+0.0.2 - 07.03.2012
+- Object extending - flex.extend
+- Read application settings from api - flex.readSettings
+- Flex social with: 
+  - Initialize facebook js api - flex.social.facebook.init
+  - Check whether the user is present in the Facebook frame - flex.social.facebook.isFacebookFrame
+  - Support facebook ui.dialog feed - flex.social.facebook.feed
+  - Login to facebook - flex.social.facebook.login
+  - Logout from facebook - flex.social.facebook.logout
+  - Support facebook ui.dialog requests (works only in canvas app) - flex.social.facebook.requests
+  - Support facebook ui.dialog message - flex.social.facebook.message
+  - Get facbook js api - flex.social.facebook.getFb
+  - Get user facebook login status - flex.social.facebook.getLoginStatus
+  - Get user data from facebook api - flex.social.facebook.getUser
+
 0.0.1 - 05.03.2012
 - Async loader - flex.loader
 - Conection with API by socket.io - flex.connect

@@ -1,3 +1,16 @@
+0.0.3 - 13.03.2012
+- Fix some documentation mistakes
+- Flex payment with: 
+  - Initialize card, and start support localstorage - flex.payment.init
+  - Get cart object from localstorage - flex.payment.cart.get
+  - Get actualy card id - flex.payment.cart.getId
+  - Add new products to card - flex.payment.cart.add
+  - Remove elements form cart (by index) - flex.payment.cart.remove
+  - Get Transaction status (by card id) - flex.payment.transactions.get
+  - Clear all cart and transactions data from localstorage - flex.payment.transactions.clear
+  - Create payment form for PayPal - flex.payment.paypal.createFormView
+  - Check PayPal configuration - flex.payment.paypal.init
+
 0.0.2 - 07.03.2012
 - Object extending - flex.extend
 - Read application settings from api - flex.readSettings

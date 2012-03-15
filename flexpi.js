@@ -70,7 +70,11 @@ flex.readSettings = function() {
     flex.socket.emit('settings', { 
         'app_id': flex.appData.app_id
     },  function (data) {
-        flex.settings = flex.extend(flex.settings, data); 
+        if (typeof data.code != 'undefined') {
+            flex.settings = data;
+        } else {
+            flex.settings = flex.extend(flex.settings, data);
+        } 
     });
 }
 

@@ -1,3 +1,11 @@
+0.0.4 - 26.03.2012
+- Flex loader add support for 3 parameter - id name
+- Flex social with
+  - Verify browserid assertion - BrowserID.verify
+  - Initialize BrowserID (load scripts) - browserid.init
+  - Login user with BrowserID (run after init) - browserid.login
+  - Logout user form your site in BrowserID - browserid.logout
+
 0.0.3 - 13.03.2012
 - Fix some documentation mistakes
 - Flex payment with: 

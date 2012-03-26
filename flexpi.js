@@ -1,6 +1,6 @@
 flex = {
     api_url : 'http://api.flexpi.com:3001/',
-    social : { facebook : {} },
+    social : { facebook : {}, browserid : {} },
     payment : { cart : {}, transactions: {}, cartData : [], paypal : {} },
     settings : {
         social : {
@@ -27,7 +27,7 @@ flex.extend = function(obj1, obj2) {
   return obj1;
 };
 
-flex.loader = function (c, d) {
+flex.loader = function (c, d, aa) {
     for (var b = c.length, 
         e = b, 
         f = function () {
@@ -44,6 +44,9 @@ flex.loader = function (c, d) {
             var a = document.createElement("script");
             a.async = true;
             a.src = h;
+            if(typeof aa != 'undefined') {
+                a.id = aa;
+            }
             a.onload = a.onreadystatechange = f;
             g.appendChild(a)
         }; b;
@@ -299,7 +302,7 @@ flex.social.facebook.getLoginStatus = function(callback) {
 /**
  * Get loged user data. if user is not logged - it will show login form, and return user data after succesful login
  * 
- * @param  Function callback Function wit user data as parameter
+ * @param  Function callback Function with user data as parameter
  */
 flex.social.facebook.getUser = function(callback) {
     flex.social.facebook.init(function(){
@@ -318,6 +321,70 @@ flex.social.facebook.getUser = function(callback) {
                 });
             }
         });
+    });
+}
+
+flex.social.browserid.verify = function(assertion, callback) {
+    flex.socket.emit('browseridVerify', { 
+        'app_id': flex.appData.app_id,
+        'assertion' : assertion,
+        'audience' : window.location.href
+    }, function (res) {
+        if (typeof callback != 'undefined') {
+            callback(res);
+        }
+    });
+}
+
+/**
+ * Initialize browserid services - load script from browserid.org.
+ * @param  Function [callback] [Optional] Callback after initialization.
+ */
+flex.social.browserid.init = function(callback) {
+    var scripts = [],
+        date = new Date();
+    scripts[0] = 'https://browserid.org/include.js';
+
+    flex.loader(scripts, function () {
+        if (typeof callback != 'undefined') {
+            callback();
+        }
+    }, 'script-browserID');
+}
+
+/**
+ * Display popup with browswer id login and return user data after succesfuly authentication.
+ * @param  Function [callback] [Optional] Function with encoded asertion data.
+ */
+flex.social.browserid.login = function(callback) {
+    if(document.getElementById('script-browserID')){
+        navigator.id.get(function(assertion) {
+            if (assertion) {
+                flex.social.browserid.verify(assertion, function(res){
+                    if (typeof callback != 'undefined') {
+                        callback(true, res, assertion);
+                    };
+                });
+            } else {
+                if (typeof callback != 'undefined') {
+                    callback(false, {});
+                }
+            }
+        }, {allowPersistent: true});
+    } else {
+        return false;
+    }
+}
+
+/**
+ * Logout user from browser id
+ * @param  Function [callback] [Optional] Function after succesfuly logout.
+ */
+flex.social.browserid.logout = function(callback){
+    window.navigator.id.logout(function(){
+        if (typeof callback != 'undefined') {
+            callback();
+        }
     });
 }
 

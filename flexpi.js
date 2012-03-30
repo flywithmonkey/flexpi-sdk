@@ -1,10 +1,11 @@
 flex = {
     api_url : 'http://api.flexpi.com:3001/',
-    social : { facebook : {}, browserid : {} },
+    social : { facebook : {}, browserid : {}, gg : {callback : {login : false, logout: false}} },
     payment : { cart : {}, transactions: {}, cartData : [], paypal : {} },
     settings : {
         social : {
-            facebook : {}
+            facebook : {},
+            gg : {ready: false}
         },
         payment : {
             paypal : {}
@@ -16,7 +17,7 @@ flex.extend = function(obj1, obj2) {
   for (var p in obj2) {
     try {
       if ( obj2[p].constructor==Object ) {
-        obj1[p] = MergeRecursive(obj1[p], obj2[p]);
+        obj1[p] = flex.extend(obj1[p], obj2[p]);//MergeRecursive(obj1[p], obj2[p]);
       } else {
         obj1[p] = obj2[p];
       }
@@ -112,7 +113,7 @@ flex.stats = function(key, value, callback) {
  */
 flex.social.facebook.init = function(callback, lang) {
     if (typeof flex.settings.social.facebook.appId == 'undefined') {
-        return { error: { code: 401, message: "First configure FlexSocial." } }
+        return { error: { code: 401, message: "First configure FlexSocial with Facebook." } }
     }
 
     if (typeof FB != 'undefined') {
@@ -328,7 +329,7 @@ flex.social.browserid.verify = function(assertion, callback) {
     flex.socket.emit('browseridVerify', { 
         'app_id': flex.appData.app_id,
         'assertion' : assertion,
-        'audience' : window.location.href
+        'audience' : window.location.hostname
     }, function (res) {
         if (typeof callback != 'undefined') {
             callback(res);
@@ -341,15 +342,14 @@ flex.social.browserid.verify = function(assertion, callback) {
  * @param  Function [callback] [Optional] Callback after initialization.
  */
 flex.social.browserid.init = function(callback) {
-    var scripts = [],
-        date = new Date();
+    var scripts = [];
     scripts[0] = 'https://browserid.org/include.js';
 
     flex.loader(scripts, function () {
         if (typeof callback != 'undefined') {
             callback();
         }
-    }, 'script-browserID');
+    }, 'flex-social-script-browserID');
 }
 
 /**
@@ -357,7 +357,7 @@ flex.social.browserid.init = function(callback) {
  * @param  Function [callback] [Optional] Function with encoded asertion data.
  */
 flex.social.browserid.login = function(callback) {
-    if(document.getElementById('script-browserID')){
+    if(document.getElementById('flex-social-script-browserID')){
         navigator.id.get(function(assertion) {
             if (assertion) {
                 flex.social.browserid.verify(assertion, function(res){
@@ -386,6 +386,138 @@ flex.social.browserid.logout = function(callback){
             callback();
         }
     });
+}
+
+/**
+ * Initialize GG JS API
+ * @param  [Function] callback [Optional] Function after initialization
+ */
+flex.social.gg.init = function(callback) {
+    if (typeof flex.settings.social.gg.client_id == 'undefined') {
+        return { error: { code: 401, message: "First configure FlexSocial with GG." } }
+    }
+
+    if(!document.getElementById('flex-social-script-gg')){
+        var scripts = [],
+            date = new Date();
+        scripts[0] = '//login.gg.pl/js/libs/0.9/gg.js';
+
+        flex.loader(scripts, function () {}, 'flex-social-script-gg');
+        window.ggReady = function() {
+            flex.settings.social.gg.ready = true;
+            gg.initialize({
+                client_id:  flex.settings.social.gg.client_id,
+                urlhashUri: flex.settings.social.gg.urlhashUri 
+            }, function(res){
+                if (typeof flex.social.gg.callback.login == 'function') {
+                    flex.social.gg.callback.login(res); 
+                }
+            }, function(res) {
+                if (typeof flex.social.gg.callback.logout == 'function') {
+                    flex.social.gg.callback.logout(res);
+                }
+            });
+            if (typeof callback != 'undefined') {
+                callback();
+            }
+        }
+    } else {
+        callback();
+    };
+}
+
+/**
+ * Show popup with login box
+ * @param  Function [callback]     [Optional] Function after succesfull login
+ * @param  Function [errorCalback] [Optional] Function after login error
+ */
+flex.social.gg.login = function(callback, errorCalback) {
+    if(!flex.settings.social.gg.ready){
+        return { error: { code: 401, message: "First run 'flex.social.gg.init'." } }
+    }
+
+    if (typeof callback != 'undefined') {
+        flex.social.gg.callback.login = callback;
+    }
+    gg.Connect.login(function(){
+        if (typeof errorCalback != 'undefined') {
+            errorCalback();
+        }
+    });
+}
+
+/**
+ * Logout user from GG
+ * @param  Function callback [Optional] Function after succesfull logout
+ */
+flex.social.gg.logout = function(callback) {
+    if(!flex.settings.social.gg.ready){
+        return { error: { code: 401, message: "First run 'flex.social.gg.init'." } }
+    }
+
+    if (typeof callback != 'undefined') {
+        flex.social.gg.callback.logout = callback;
+    }
+    gg.Connect.logout();
+}
+
+/**
+ * Get user login status
+ * @param  Function [callback] [Optional] Function run after login status checking with status as parameter
+ */
+flex.social.gg.getLoginStatus = function(callback) {
+    if(!flex.settings.social.gg.ready){
+        return { error: { code: 401, message: "First run 'flex.social.gg.init'." } }
+    }
+
+    gg.Connect.getLoginStatus(function(res){
+        if (typeof callback != 'undefined') {
+            callback(res);
+        }
+    });
+    
+}
+
+/**
+ * Get user data from GG
+ * @param  Function callback [Optional] Function with user data as parameter
+ */
+flex.social.gg.getUser = function(callback) {
+    if(!flex.settings.social.gg.ready){
+        return { error: { code: 401, message: "First run 'flex.social.gg.init'." } }
+    }
+
+    flex.social.gg.getLoginStatus(function(res) {
+        var getUser = function(){
+            gg.api.pubdir.get(res.userId, function(user){
+                if (typeof callback != 'undefined') {
+                    callback(user);
+                }
+            });
+        };
+
+        if(typeof res.userId == 'undefined') {
+            flex.social.gg.login(function(){
+                flex.social.gg.getLoginStatus(function(res) {
+                    getUser();
+                });
+            });
+        } else {
+            getUser();
+        }
+    });
+}
+
+/**
+ * Get GG object
+ * @return object GG object
+ */
+flex.social.gg.getGg = function() {
+    if(!flex.settings.social.gg.ready){
+        return { error: { code: 401, message: "First run 'flex.social.gg.init'." } }
+    }
+
+    return gg;
 }
 
 /* --------------------------- flex.payment--------------------------- */

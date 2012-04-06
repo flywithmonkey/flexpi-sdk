@@ -2,6 +2,7 @@ flex = {
     api_url : 'http://api.flexpi.com:3001/',
     social : { facebook : {}, browserid : {}, gg : {callback : {login : false, logout: false}} },
     payment : { cart : {}, transactions: {}, cartData : [], paypal : {} },
+    badges : { badge : {}, user : {} }, 
     settings : {
         social : {
             facebook : {},
@@ -9,6 +10,9 @@ flex = {
         },
         payment : {
             paypal : {}
+        },
+        badges : {
+            ready : false
         }
     }
 };
@@ -390,7 +394,7 @@ flex.social.browserid.logout = function(callback){
 
 /**
  * Initialize GG JS API
- * @param  [Function] callback [Optional] Function after initialization
+ * @param  Function callback [Optional] Function after initialization
  */
 flex.social.gg.init = function(callback) {
     if (typeof flex.settings.social.gg.client_id == 'undefined') {
@@ -427,7 +431,7 @@ flex.social.gg.init = function(callback) {
 }
 
 /**
- * Show popup with login box
+ * Show popup with login box (run after click event)
  * @param  Function [callback]     [Optional] Function after succesfull login
  * @param  Function [errorCalback] [Optional] Function after login error
  */
@@ -447,8 +451,8 @@ flex.social.gg.login = function(callback, errorCalback) {
 }
 
 /**
- * Logout user from GG
- * @param  Function callback [Optional] Function after succesfull logout
+ * Logout user from GG.
+ * @param  Function [callback] [Optional] Function after succesfull logout
  */
 flex.social.gg.logout = function(callback) {
     if(!flex.settings.social.gg.ready){
@@ -462,8 +466,8 @@ flex.social.gg.logout = function(callback) {
 }
 
 /**
- * Get user login status
- * @param  Function [callback] [Optional] Function run after login status checking with status as parameter
+ * Get user login status.
+ * @param  Function [callback] [Optional] Function run after login status checking with status as parameter.
  */
 flex.social.gg.getLoginStatus = function(callback) {
     if(!flex.settings.social.gg.ready){
@@ -479,8 +483,8 @@ flex.social.gg.getLoginStatus = function(callback) {
 }
 
 /**
- * Get user data from GG
- * @param  Function callback [Optional] Function with user data as parameter
+ * Get user data from GG.
+ * @param  Function [callback] [Optional] Function with user data as parameter.
  */
 flex.social.gg.getUser = function(callback) {
     if(!flex.settings.social.gg.ready){
@@ -509,8 +513,8 @@ flex.social.gg.getUser = function(callback) {
 }
 
 /**
- * Get GG object
- * @return object GG object
+ * Get GG object.
+ * @return object GG object.
  */
 flex.social.gg.getGg = function() {
     if(!flex.settings.social.gg.ready){
@@ -518,6 +522,104 @@ flex.social.gg.getGg = function() {
     }
 
     return gg;
+}
+
+/* --------------------------- flex.badges---------------------- */
+
+/**
+ * Initialize support for badges
+ * @return boolean If everything is ok return will be true
+ */
+flex.badges.init = function() {
+    if (!flex.settings.badges.ready) {
+        return false;
+    }
+    return true;
+}
+
+
+/**
+ * Get data for badge
+ * @param  string       badgeId     Badge id (from your app dashboard)
+ * @param  Function     [callback]  [Optional] Function with badge data as parameter
+ */
+flex.badges.badge.get = function(badgeId, callback) {
+    if(!flex.badges.init){
+        return { error: { code: 401, message: "First configure badges." } }
+    }
+
+    flex.socket.emit('badges.badge.get', { 
+        'app_id': flex.appData.app_id,
+        'badge_id' : badgeId
+    }, function (res) {
+        if (typeof callback != 'undefined') {
+            return callback(res);
+        }
+    });
+}
+
+/**
+ * Get all badges (badges_id) for single user
+ * @param  string       userId      Your user identyficator
+ * @param  Function     [callback]  [Optional] Function with array of badges (baadge_id) as parameter
+ */
+flex.badges.user.getAll = function(userId, callback) {
+    if(!flex.badges.init){
+        return { error: { code: 401, message: "First configure badges." } }
+    }
+
+    flex.socket.emit('badges.user.getAll', { 
+        'app_id': flex.appData.app_id,
+        'user_id' : userId
+    }, function (res) {
+        if (typeof callback != 'undefined') {
+            callback(res);
+        }
+    });
+}
+
+/**
+ * Check whether the user has checked badge
+ * @param  string       userId      Your user identyficator
+ * @param  string       badgeId     Badge id (from your app dashboard)
+ * @param  Function     [callback]  [Optional] Function with data as parameter
+ */
+flex.badges.user.has = function(userId, badgeId, callback) {
+    if(!flex.badges.init){
+        return { error: { code: 401, message: "First configure badges." } }
+    }
+
+    flex.socket.emit('badges.user.has', { 
+        'app_id': flex.appData.app_id,
+        'user_id' : userId,
+        'badge_id' : badgeId
+    }, function (res) {
+        if (typeof callback != 'undefined') {
+            callback(res);
+        }
+    });
+}
+
+/**
+ * Set badge for choosen user
+ * @param string   userId       Your user identyficator
+ * @param string   badgeId      Badge id (from your app dashboard)
+ * @param Function [callback]   [Optional] Function with data as parameter
+ */
+flex.badges.user.set = function(userId, badgeId, callback) {
+    if(!flex.badges.init){
+        return { error: { code: 401, message: "First configure badges." } }
+    }
+
+    flex.socket.emit('badges.user.set', { 
+        'app_id': flex.appData.app_id,
+        'user_id' : userId,
+        'badge_id' : badgeId
+    }, function (res) {
+        if (typeof callback != 'undefined') {
+            callback(res);
+        }
+    });
 }
 
 /* --------------------------- flex.payment--------------------------- */

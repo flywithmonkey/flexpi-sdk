@@ -1,23 +1,23 @@
 flex = {
-    api_url : 'http://api.flexpi.com:3001/',
-    social : { facebook : {}, browserid : {}, gg : {callback : {login : false, logout: false}} },
-    payment : { cart : {}, transactions: {}, cartData : [], paypal : {} },
-    badges : { badge : {}, user : {} }, 
-    settings : {
-        social : {
-            facebook : {},
-            gg : {ready: false}
+    api_url: 'http://api.flexpi.com:3001/',
+    social: { facebook: {}, browserid: {}, gg: {callback: {login: false, logout: false}} },
+    payment: { cart: {}, transactions: {}, cartData: [], paypal: {} },
+    badges: { badge: {}, user: {} },
+    settings: {
+        social: {
+            facebook: {},
+            gg: {ready: false}
         },
-        payment : {
-            paypal : {}
+        payment: {
+            paypal: {}
         },
-        badges : {
-            ready : false
+        badges: {
+            ready: false
         }
     }
 };
 
-flex.extend = function(obj1, obj2) {
+flex.extend = function (obj1, obj2) {
   for (var p in obj2) {
     try {
       if ( obj2[p].constructor==Object ) {
@@ -527,7 +527,7 @@ flex.social.gg.getGg = function() {
 /* --------------------------- flex.badges---------------------- */
 
 /**
- * Initialize support for badges
+ * Initialize support for badges.
  * @return boolean If everything is ok return will be true
  */
 flex.badges.init = function() {
@@ -539,12 +539,12 @@ flex.badges.init = function() {
 
 
 /**
- * Get data for badge
+ * Get data for badge.
  * @param  string       badgeId     Badge id (from your app dashboard)
  * @param  Function     [callback]  [Optional] Function with badge data as parameter
  */
 flex.badges.badge.get = function(badgeId, callback) {
-    if(!flex.badges.init){
+    if(!flex.badges.init()){
         return { error: { code: 401, message: "First configure badges." } }
     }
 
@@ -559,12 +559,12 @@ flex.badges.badge.get = function(badgeId, callback) {
 }
 
 /**
- * Get all badges (badges_id) for single user
+ * Get all badges (badges_id) for single user.
  * @param  string       userId      Your user identyficator
  * @param  Function     [callback]  [Optional] Function with array of badges (baadge_id) as parameter
  */
 flex.badges.user.getAll = function(userId, callback) {
-    if(!flex.badges.init){
+    if(!flex.badges.init()){
         return { error: { code: 401, message: "First configure badges." } }
     }
 
@@ -579,13 +579,13 @@ flex.badges.user.getAll = function(userId, callback) {
 }
 
 /**
- * Check whether the user has checked badge
+ * Check whether the user has checked badge.
  * @param  string       userId      Your user identyficator
  * @param  string       badgeId     Badge id (from your app dashboard)
  * @param  Function     [callback]  [Optional] Function with data as parameter
  */
 flex.badges.user.has = function(userId, badgeId, callback) {
-    if(!flex.badges.init){
+    if(!flex.badges.init()){
         return { error: { code: 401, message: "First configure badges." } }
     }
 
@@ -601,13 +601,13 @@ flex.badges.user.has = function(userId, badgeId, callback) {
 }
 
 /**
- * Set badge for choosen user
+ * Set badge for choosen user.
  * @param string   userId       Your user identyficator
  * @param string   badgeId      Badge id (from your app dashboard)
  * @param Function [callback]   [Optional] Function with data as parameter
  */
 flex.badges.user.set = function(userId, badgeId, callback) {
-    if(!flex.badges.init){
+    if(!flex.badges.init()){
         return { error: { code: 401, message: "First configure badges." } }
     }
 
@@ -631,27 +631,41 @@ flex.badges.user.set = function(userId, badgeId, callback) {
  * @param  string   [cartId]   [Optional] Invidual id for cart identification - with this id You can later get transaction status.
  */
 flex.payment.init = function(callback, cartId) {
-    var scripts = [],
-        date = new Date();
+    var scripts = [];
     scripts[0] = '//flexpi.com/api/store.js';
 
     flex.loader(scripts, function () {
-        if (typeof cartId == 'undefined') {
-            cartId = date.getTime()+'_'+Math.floor(Math.random()*101);
-        }
+        
+        flex.payment._regenerate(cartId);
 
-        if (typeof store.get('cart') != 'undefined') {
-            flex.payment.cartData = store.get('cart');
-        } else {
-            flex.payment.transactions.cartId = cartId;
-            store.set('transactions', flex.payment.transactions);
-        }
-
-        store.set('cart', flex.payment.cartData);
         if (typeof callback != 'undefined') {
             callback(flex.payment.cartData);
         }
     });
+}
+
+flex.payment._regenerate = function(cartId) {
+    var date = new Date(),
+        transactions = store.get('transactions');
+
+    if (typeof transactions != 'undefined' && typeof cartId == 'undefined') {
+        if (typeof transactions.cartId != 'undefined') {
+            cartId = transactions.cartId;
+        }
+    } else if (typeof cartId == 'undefined') {
+        cartId = date.getTime()+'_'+Math.floor(Math.random()*101);
+    }
+
+    if (typeof store.get('cart') != 'undefined') {
+        flex.payment.cartData = store.get('cart');
+    } 
+
+    if (typeof transactions == 'undefined') {
+        flex.payment.transactions.cartId = cartId;
+        store.set('transactions', flex.payment.transactions);
+    }
+
+    store.set('cart', flex.payment.cartData);
 }
 
 /**
@@ -751,9 +765,11 @@ flex.payment.transactions.get = function(transactionId, callback) {
  */
 flex.payment.transactions.clear = function() {
     if (typeof store != 'undefined') {
-         store.remove('transactions');
-         store.remove('cart');
-         return true;
+        store.remove('transactions');
+        store.remove('cart');
+        flex.payment._regenerate();
+        flex.payment.cartData = [];
+        return true;
     } else {
         return { error: { code: 401, message: "First run 'flex.payment.init'." } }
     }
@@ -766,15 +782,20 @@ flex.payment.transactions.clear = function() {
  * @param  string elementId   Div id - apended form will be here
  * @param  string buttonValue Text for form submit value
  */
-flex.payment.paypal.createFormView = function(elementId, buttonValue) {
+flex.payment.paypal.createFormView = function(elementId, buttonValue, callback) {
     var container   = document.getElementById(elementId);
 
     if (flex.payment.paypal.init() != true ) {
         return flex.payment.paypal.init();
     }
 
-    if (typeof container == 'undefined') {
+    if (container == null) {
         return { error: { code: 404, message: "Element "+elementId+" dont exist." } }
+    }
+
+    existingForm = document.getElementById('flex-payment-paypal');
+    if (existingForm != null ) {
+        container.removeChild(existingForm);
     }
 
     if (flex.payment.cartData.length == 0) {
@@ -799,6 +820,7 @@ flex.payment.paypal.createFormView = function(elementId, buttonValue) {
         custom.setAttribute('hidden', true);
         custom.setAttribute('name', 'custom');
         custom.setAttribute('value', store.get('transactions').cartId+'___'+flex.appData.app_id);
+        custom.setAttribute('id', 'flex-payment-paypal-custom');
 
     var upload      = document.createElement("input");
         upload.setAttribute('hidden', true);
@@ -814,6 +836,7 @@ flex.payment.paypal.createFormView = function(elementId, buttonValue) {
         notify_url.setAttribute('hidden', true);
         notify_url.setAttribute('name', 'notify_url');
         notify_url.setAttribute('value', 'http://flexpi.com/api/payment/paypal/ipn');
+        notify_url.setAttribute('id', 'flex-payment-paypal-notify-url');
 
     var business      = document.createElement("input");
         business.setAttribute('hidden', true);
@@ -825,6 +848,7 @@ flex.payment.paypal.createFormView = function(elementId, buttonValue) {
     form.appendChild(custom);
     form.appendChild(upload);
     form.appendChild(currency);
+    form.appendChild(notify_url);
     form.appendChild(business);
 
     var item_name,
@@ -860,6 +884,10 @@ flex.payment.paypal.createFormView = function(elementId, buttonValue) {
     form.appendChild(submit);
 
     container.appendChild(form);
+
+    if (typeof callback != 'undefined') {
+        callback();
+    }
 }
 
 /**
